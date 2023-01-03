@@ -1,50 +1,78 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="{{ url_for('main.index') }}">AI-16 Project3</a>
-        <button class="navbar-toggler" type="button"
+<header class="p-3 text-bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}"><h2>Steam Recommend</h2></a>
+            <button class="navbar-toggler" type="button"
                 data-bs-toggle="collapse"
                 data-bs-target="#navbarSupportedContent"
                 aria-controls="navbarSupportedContent"
                 aria-expanded="false"
                 aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            {% if g.user %}
-            <ul class="navbar-nav ms-auto align-items-center">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ g.user.profileurl }}">
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item align-items-center">
+                        <!-- Button trigger modal -->
+                        <a class="nav-link" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                            AI-16 Project3
+                        </a>
+                        <!-- Modal -->
+                        <div class="modal fade text-primary" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h1 class="modal-title fs-5" id="exampleModalLabel">AI-16 Project3</h1>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        AI 16기 화이팅!
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+                {% if g.user %}
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ g.user.profileurl }}">
                         <img src="{{ g.user.avatar }}" class="rounded">
-                    </a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user.username }}</a>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#">Action</a></li>
-                        <li><a class="dropdown-item" href="#">Another action</a></li>
-                        <li><a class="dropdown-item" href="#">Something else here</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a id="logout-button" class="dropdown-item" href="#">로그아웃</a>
-                        </li>
-                    </ul>
-                </li>
-                
-            </ul>
-            {% else %}
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item align-items-center">
-                    <a id="login-button" class="nav-link" href="#">
-                        <img src="{{ url_for("static", filename="images/steam_login.png") }}">
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user.username }}</a>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">Action</a></li>
+                            <li><a class="dropdown-item" href="#">Another action</a></li>
+                            <li><a class="dropdown-item" href="#">Something else here</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a id="logout-button" class="dropdown-item" href="#">로그아웃</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                {% else %}
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item align-items-center">
+                        <a id="login-button" class="nav-link" href="#">
+                        <img src='{{ url_for("static", filename="images/steam_login.png") }}'>
                         <br>
                         스팀을 통해 로그인하기
-                    </a>
-                </li>
-            </ul>
-            {% endif %}
+                        </a>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
+</header>
 
 <!-- Include the jQuery library -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

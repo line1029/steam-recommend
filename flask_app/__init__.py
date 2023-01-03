@@ -23,8 +23,9 @@ class User:
                 self.username = userdata["personaname"]
                 self.profileurl = userdata["profileurl"]
                 self.avatar = userdata["avatar"]
-                self.visibility = userdata["communityvisibilitystate"]
+                self.avatarmedium = userdata["avatarmedium"]
                 self.avatarfull = userdata["avatarfull"]
+                self.visibility = userdata["communityvisibilitystate"]
             else:
                 flash("invalid query or couldn't get response")
 

@@ -6,11 +6,11 @@ from urllib.parse import urlparse
 import sqlite3
 import joblib
 from sklearn.metrics.pairwise import cosine_similarity
-from flask import Blueprint, url_for, render_template, request, session, g, flash, jsonify
+from flask import Blueprint, url_for, render_template, request, flash, g
 from werkzeug.utils import redirect
 from flask_app import api_key, User
-from flask_app.forms import QueryForm
-from datetime import datetime, timedelta
+from flask_app.forms import QueryForm, UserForm
+from datetime import datetime
 
 
 
@@ -198,8 +198,8 @@ def get_recommend_result(game_count: int, games: 'list[(int, int, int)]') -> dic
         y_playtime_ccu.extend(find_sim_game(appid, games_index_mask, base="ccu"))
     y_playtime_rating = list(set(y_playtime_rating))
     y_playtime_ccu = list(set(y_playtime_ccu))
-    y_playtime_rating = np.random.choice(y_playtime_rating, 10, False)
-    y_playtime_ccu = np.random.choice(y_playtime_ccu, 10, False)
+    y_playtime_rating = np.random.choice(y_playtime_rating, 6, False)
+    y_playtime_ccu = np.random.choice(y_playtime_ccu, 6, False)
 
     y_recent_rating = []
     y_recent_ccu = []
@@ -208,8 +208,8 @@ def get_recommend_result(game_count: int, games: 'list[(int, int, int)]') -> dic
         y_recent_ccu.extend(find_sim_game(appid, games_index_mask, base="ccu"))
     y_recent_rating = list(set(y_recent_rating))
     y_recent_ccu = list(set(y_recent_ccu))
-    y_recent_rating = np.random.choice(y_recent_rating, 10, False)
-    y_recent_ccu = np.random.choice(y_recent_ccu, 10, False)
+    y_recent_rating = np.random.choice(y_recent_rating, 6, False)
+    y_recent_ccu = np.random.choice(y_recent_ccu, 6, False)
 
     recommend_result = {
         "y_playtime_rating":list(map(int, y_playtime_rating)),
@@ -332,11 +332,22 @@ def store_user_data(user: User, data: dict):
     
 
 
-@bp.route('/', methods=('GET', 'POST'))
+@bp.route('/')
 def main():
-    form = QueryForm()
-    if request.method == 'POST' and form.validate_on_submit():
-        query = form.query.data
+    query_form = QueryForm()
+    user_form = UserForm()
+    image_appid = np.random.choice(candidate_games.index, 1)[0]
+    return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
+
+
+
+@bp.route('/query', methods=('POST',))
+def query():
+    query_form = QueryForm()
+    user_form = UserForm()
+    image_appid = np.random.choice(candidate_games.index, 1)[0]
+    if request.method == 'POST' and query_form.validate_on_submit():
+        query = query_form.query.data
         user = get_user_data(query)
         if user.username == None:
             return redirect(url_for('analysis.main'))
@@ -348,8 +359,73 @@ def main():
             flash("게임이 없습니다! 분석이 불가능합니다.")
             return redirect(url_for('analysis.main'))
         games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
-        recommend_result = get_recommend_result(game_count, games)
-        store_user_data(user, data)
+        # session["result"] = get_recommend_result(game_count, games)
+        user_dict = {
+            "id":user.id,
+            "name":user.username,
+            "url":user.profileurl,
+            "avt":user.avatarfull
+        }
+        # store_user_data(user, data)
+        games_dict = dict((i[0], (i[1], i[2])) for i in games)
+        return redirect(url_for('analysis.result', recommend_result=get_recommend_result(game_count, games), user=user_dict, games=games_dict))
+    return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
+
+
+@bp.route('/user', methods=('POST',))
+def user():
+    query_form = QueryForm()
+    user_form = UserForm()
+    image_appid = np.random.choice(candidate_games.index, 1)[0]
+    if request.method == 'POST' and user_form.validate_on_submit():
+        user = g.user
+        if user.username == None:
+            return redirect(url_for('analysis.main'))
+        data = get_owned_games(user)
+        if data == None:
+            return redirect(url_for('analysis.main'))
+        game_count = data["game_count"]
+        if not game_count:
+            flash("게임이 없습니다! 분석이 불가능합니다.")
+            return redirect(url_for('analysis.main'))
+        games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
+        # session["result"] = get_recommend_result(game_count, games)
+        user_dict = {
+            "id":user.id,
+            "name":user.username,
+            "url":user.profileurl,
+            "avt":user.avatarfull
+        }
+        # store_user_data(user, data)
+        games_dict = dict((i[0], (i[1], i[2])) for i in games)
+        return redirect(url_for('analysis.result', recommend_result=get_recommend_result(game_count, games), user=user_dict, games=games_dict))
+    return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
+
+
+@bp.route('/result', methods=('GET', 'POST'))
+def result():
+    result = eval(request.args.get("recommend_result"))
+    user = eval(request.args.get("user"))
+    games = eval(request.args.get("games"))
+    games = [(k, games[k][0], games[k][1]) for k in games]
+    game_count = len(games)
+    total_playtime = sum(i[1] for i in games)
+    last_epoch_time = max(i[2] for i in games)
+    last_played_date = datetime.fromtimestamp(last_epoch_time)
+    if result == None:
+        return redirect(url_for('analysis.main'))
+    if request.method == 'POST':
+        result = get_recommend_result(game_count, games)
+        return render_template("analysis/analysis_result.html",
+            result=result,
+            user=user,
+            games=games,
+            total_playtime=total_playtime,
+            last_played_date=last_played_date)
     
-        return jsonify(recommend_result)
-    return render_template('analysis/analysis_form.html', form=form)
+    return render_template("analysis/analysis_result.html",
+        result=result,
+        user=user,
+        games=games,
+        total_playtime=total_playtime,
+        last_played_date=last_played_date)

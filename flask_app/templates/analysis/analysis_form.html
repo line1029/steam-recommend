@@ -2,16 +2,64 @@
 {% block content %}
 <!-- url 입력 -->
 <div class="container" data-aos="fade-up">
-    <h5 class="my-3 border-bottom pb-2 text-white">프로필 입력</h5>
-    <form method="post" class="mb-3" onkeydown="if (event.keyCode == 13) { this.submit(); }">
-        {{ form.csrf_token }}
-        {% include "form_errors.html" %}
-        {{ form.query(class="form-control rounded",
-            placeholder="custumurl or https://steamcommunity.com/id/custumurl or SteamID64 or https://steamcommunity.com/profiles/SteamID64") }}
-        <br>
-        <button type="submit" class="btn btn-outline-info btn-lg px-4 me-sm-3 fw-bold" data-aos="fade-up" data-aos-delay="200">
-            분석하기
-        </button>
-    </form>
+    <div class="row">
+        <div class="col-lg d-flex align-items-end">
+            <a href="https://store.steampowered.com/app/{{image_appid}}">
+            <img class="img-fluid rounded-5" src="https://cdn.akamai.steamstatic.com/steam/apps/{{image_appid}}/capsule_616x353.jpg">
+            </a>
+        </div>
+        <div class="col-lg">
+            <h5 class="my-3 pb-2 text-white">프로필 검색</h5>
+            <form action="{{ url_for('analysis.query') }}" method="post" onkeydown="if (event.keyCode == 13) { this.submit(); }" class="border-bottom">
+                <div class="row mb-2">
+                    <div class="col-8 py-2">
+                        {{ query_form.csrf_token }}
+                        {% include "form_errors.html" %}
+                        {{ query_form.query(class="form-control rounded",
+                            placeholder="url / custumurl / SteamID64") }}
+                    </div>
+                    <div class="col-4 d-flex justify-content-center py-2">
+                        <button type="submit" class="btn btn-outline-info btn-lg px-4 me-sm-3 fw-bold float-end" data-aos="fade-up" data-aos-delay="200">
+                            추천받기
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <form action="{{ url_for('analysis.user') }}" method="post" >
+                <h5 class="my-3 pb-2 text-white">내 아이디로 추천받기</h5>
+                <div class="row d-flex justify-content-center mb-2 text-bg-dark">
+                    {% if g.user %}
+                    {{ user_form.csrf_token }}
+                    <input type="hidden" name="user_query" id="user_query" value="{{ g.user.id }}">
+                    <div class="col py-2">
+                        <a href="{{g.user.profileurl}}">
+                            <img src="{{g.user.avatarmedium}}" class="img-fluid rounded-5">
+                        </a>
+                    </div>
+                    <div class="col d-flex justify-content-center align-items-center py-2">
+                        <h4>{{g.user.username}}</h4>
+                    </div>
+                    <div class="col d-flex justify-content-center py-2">
+                        <input type="hidden" name="data" value="{{ g.user.id }}">
+                        <button type="submit" class="btn btn-outline-info btn-lg px-4 me-sm-3 fw-bold float-end" data-aos="fade-up" data-aos-delay="200">
+                            추천받기
+                        </button>
+                    {% else %}
+                    <div class="col py-2">
+                        <img src="{{url_for('static', filename='images/no_id.jpg')}}" class="img-fluid rounded-5">
+                    </div>
+                    <div class="col d-flex justify-content-center align-items-center py-2">
+                        <h4>유저 이름</h4>
+                    </div>
+                    <div class="col d-flex justify-content-center py-2">
+                        <button class="btn btn-outline-danger btn-lg px-4 me-sm-3 fw-bold float-end" data-aos="fade-up" data-aos-delay="200" disabled>
+                            추천받기
+                        </button>
+                    {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

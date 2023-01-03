@@ -1,22 +1,68 @@
 {% extends 'base.html' %}
 {% block content %}
-<!-- url 입력 -->
-<div class="container" data-aos="fade-up">
-    <h5 class="my-3 border-bottom pb-2 text-white">프로파일 입력</h5>
-    <form method="post" class="mb-3">
-        {{ form.csrf_token }}
-        {{ form.query(class="form-control rounded",
-            placeholder="custumurl or https://steamcommunity.com/id/custumurl\nSteamID64 or https://steamcommunity.com/profiles/SteamID64") }}
-        <br>
-        <button type="submit" class="btn btn-outline-info btn-lg px-4 me-sm-3 fw-bold" data-aos="fade-up" data-aos-delay="200">
-            분석하기
-        </button>
-    </form>
-</div>
 <!-- flash 오류 -->
 {% for message in get_flashed_messages() %}
 <div class="alert alert-danger" role="alert">
     {{ message }}
+</div>
+{% endfor %}
+<!-- 유저 정보, 다시 추천 탭 -->
+<div class="container px-4 py-5 text-bg-dark border" id="user-info">
+    <div class="row row-cols-lg-3">
+        <div class="col-2 d-flex justify-content-center align-items-center">
+            <a href="{{user["url"]}}">
+            <img src="{{user["avt"]}}" alt="Avatar" class="img-fluid rounded-5">
+            </a>
+        </div>
+        <div class="col-8 mx-auto">
+            <table class="table table-dark table-borderless">
+                <thead>
+                    <tr>
+                        <th scope="col"></th>
+                        <th scope="col"><h1>{{user["name"]}}</h1></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row"></th>
+                        <td><h3>타이틀 갯수 : {{games|length}}</h3></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"></th>
+                        <td><h3>총 플레이시간 : {{"%.2f"|format(total_playtime / 60)}} 시간</h3></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"></th>
+                        <td><h4>마지막으로 플레이한 시간 :<br> {{last_played_date}}</h4></td>
+                    </tr>
+                </tbody>
+            </table>
+                
+                
+        </div>
+        <div class="col-2 d-flex justify-content-center align-items-center">
+            <form method="post" class="mb-3">
+            <button type="submit" class="btn btn-outline-info btn-lg px-4 me-sm-3 fw-bold">다시 추천받기</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+<!-- 추천 탭 -->
+{% for key in result %}
+<div class="container px-4 py-5 text-bg-dark" id="{{key}}">
+    <h2 class="pb-2 border-bottom">{{", ".join(["플레이 시간 기반" if "playtime" in key else "최근 플레이 기반", "트렌드(ccu 기준) 추천 모델" if "ccu" in key else "평점 기준 추천 모델"])}}</h2>
+    <div class="row row-cols-1 row-cols-lg-2 align-items-stretch g-4 py-5">
+        {% for appid in result[key] %}
+        <div class="col">
+            <a href="https://store.steampowered.com/app/{{appid}}">
+                <img
+                    class="img-fluid rounded-5"
+                    src='https://cdn.akamai.steamstatic.com/steam/apps/{{appid}}/capsule_616x353.jpg'>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endfor %}
 {% endblock %}
