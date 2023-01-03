@@ -8,3 +8,5 @@ tag_game/
 chromedriver.exe
 
 *.csv
+
+logs
