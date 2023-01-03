@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- url 입력 -->
+<div class="container" data-aos="fade-up">
+    <h5 class="my-3 border-bottom pb-2 text-white">프로파일 입력</h5>
+    <form method="post" class="mb-3">
+        {{ form.csrf_token }}
+        {{ form.query(class="form-control rounded",
+            placeholder="custumurl or https://steamcommunity.com/id/custumurl\nSteamID64 or https://steamcommunity.com/profiles/SteamID64") }}
+        <br>
+        <button type="submit" class="btn btn-outline-info btn-lg px-4 me-sm-3 fw-bold" data-aos="fade-up" data-aos-delay="200">
+            분석하기
+        </button>
+    </form>
+</div>
+<!-- flash 오류 -->
+{% for message in get_flashed_messages() %}
+<div class="alert alert-danger" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endblock %}

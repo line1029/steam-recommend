@@ -1,0 +1,82 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">AI-16 Project3</a>
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            {% if g.user %}
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ g.user.profileurl }}">
+                        <img src="{{ g.user.avatar }}" class="rounded">
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">{{ g.user.username }}</a>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Action</a></li>
+                        <li><a class="dropdown-item" href="#">Another action</a></li>
+                        <li><a class="dropdown-item" href="#">Something else here</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a id="logout-button" class="dropdown-item" href="#">로그아웃</a>
+                        </li>
+                    </ul>
+                </li>
+                
+            </ul>
+            {% else %}
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <li class="nav-item align-items-center">
+                    <a id="login-button" class="nav-link" href="#">
+                        <img src="{{ url_for("static", filename="images/steam_login.png") }}">
+                        <br>
+                        스팀을 통해 로그인하기
+                    </a>
+                </li>
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- Include the jQuery library -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+  $(document).ready(function() {
+    // Set the value of the hidden field and submit the form when the button is clicked
+    $('#login-button').click(function(e) {
+      // Prevent the default action (following the link)
+      e.preventDefault();
+      // Set the value of the hidden field
+      $('#login_next').val(window.location.href);
+      // Submit the form
+      $('#login-form').submit();
+    });
+    $('#logout-button').click(function(e) {
+        // Prevent the default action (following the link)
+        e.preventDefault();
+        // Set the value of the hidden field
+        $('#logout_next').val(window.location.pathname + window.location.search);
+        // Submit the form
+        $('#logout-form').submit();
+      });
+  });
+</script>
+<!-- Add a form to submit the logout request -->
+<form id="logout-form" method="get" action="{{ url_for('auth.logout') }}">
+    <!-- Add a hidden field to the form to store the current URL -->
+    <input type="hidden" id="logout_next" name="logout_next">
+</form>
+<!-- Add a form to submit the login request -->
+<form id="login-form" method="get" action="{{ url_for('auth.login') }}">
+    <!-- Add a hidden field to the form to store the current URL -->
+    <input type="hidden" id="login_next" name="login_next">
+</form>
