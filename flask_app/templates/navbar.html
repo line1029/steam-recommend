@@ -53,7 +53,7 @@
                                 <hr class="dropdown-divider">
                             </li>
                             <li>
-                                <a id="logout-button" class="dropdown-item" href="#">로그아웃</a>
+                                <a id="logout-button" class="dropdown-item" href="{{ url_for('auth.logout') }}">로그아웃</a>
                             </li>
                         </ul>
                     </li>
@@ -61,7 +61,7 @@
                 {% else %}
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                     <li class="nav-item align-items-center">
-                        <a id="login-button" class="nav-link" href="#">
+                        <a id="login-button" class="nav-link" href="{{ url_for('auth.login') }}">
                         <img src='{{ url_for("static", filename="images/steam_login.png") }}'>
                         <br>
                         스팀을 통해 로그인하기
@@ -73,38 +73,3 @@
         </div>
     </nav>
 </header>
-
-<!-- Include the jQuery library -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<script>
-  $(document).ready(function() {
-    // Set the value of the hidden field and submit the form when the button is clicked
-    $('#login-button').click(function(e) {
-      // Prevent the default action (following the link)
-      e.preventDefault();
-      // Set the value of the hidden field
-      $('#login_next').val(window.location.href);
-      // Submit the form
-      $('#login-form').submit();
-    });
-    $('#logout-button').click(function(e) {
-        // Prevent the default action (following the link)
-        e.preventDefault();
-        // Set the value of the hidden field
-        $('#logout_next').val(window.location.pathname + window.location.search);
-        // Submit the form
-        $('#logout-form').submit();
-      });
-  });
-</script>
-<!-- Add a form to submit the logout request -->
-<form id="logout-form" method="get" action="{{ url_for('auth.logout') }}">
-    <!-- Add a hidden field to the form to store the current URL -->
-    <input type="hidden" id="logout_next" name="logout_next">
-</form>
-<!-- Add a form to submit the login request -->
-<form id="login-form" method="get" action="{{ url_for('auth.login') }}">
-    <!-- Add a hidden field to the form to store the current URL -->
-    <input type="hidden" id="login_next" name="login_next">
-</form>
