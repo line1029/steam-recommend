@@ -1,12 +1,11 @@
 from logging.config import dictConfig
-import os
+from config.default import *
 
-BASE_DIR = os.path.dirname(__file__)
-
-SQLALCHEMY_DATABASE_URI = 'sqlite:///{}'.format(os.path.join(BASE_DIR, 'flask_app.db'))
+SQLALCHEMY_DATABASE_URI = 'sqlite:///{}'.format(os.path.join(BASE_DIR, 'pybo.db'))
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+SECRET_KEY = "will be changed"
 
-SECRET_KEY = "AI_16_Fighting"
+
 
 dictConfig({
     'version': 1,

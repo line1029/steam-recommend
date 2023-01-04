@@ -1,10 +1,10 @@
 import os
-from flask import Flask, request, render_template, flash
+from flask import Flask, render_template, flash
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import requests
-import config
+from config import development
 
 
 class User:
@@ -41,7 +41,7 @@ def page_not_found(e):
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(config)
+    app.config.from_object(development)
 
     # ORM
     db.init_app(app)
