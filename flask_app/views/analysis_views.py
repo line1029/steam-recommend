@@ -5,8 +5,9 @@ import requests
 from urllib.parse import urlparse
 import sqlite3
 import joblib
+import json
 from sklearn.metrics.pairwise import cosine_similarity
-from flask import Blueprint, url_for, render_template, request, flash, g
+from flask import Blueprint, url_for, render_template, request, flash, g, jsonify
 from werkzeug.utils import redirect
 from flask_app import api_key, User
 from flask_app.forms import QueryForm, UserForm
@@ -171,9 +172,10 @@ def find_sim_game(appid: int, mask: 'np.ndarray[np.bool]', top_n=10, base="weigh
 
 def get_recommend_result(game_count: int, games: 'list[(int, int, int)]') -> dict:
     games_index_mask = candidate_vector.index.isin([i[0] for i in games])
-    played_game_count = len(games)
-    played_games_by_playtime = [i[0] for i in sorted(games, key=lambda x: -x[1])][:20]
-    played_games_by_recent = [i[0] for i in sorted(games, key=lambda x: -x[2])][:20]
+    played_games = [i for i in games if i[1]]
+    played_game_count = len(played_games)
+    played_games_by_playtime = [i[0] for i in sorted(played_games, key=lambda x: -x[1])][:20]
+    played_games_by_recent = [i[0] for i in sorted(played_games, key=lambda x: -x[2])][:20]
     if played_game_count >= 5:
         X_playtime = np.random.choice(played_games_by_playtime, 5, replace=False)
         X_recent = np.random.choice(played_games_by_recent, 5, replace=False)
@@ -357,19 +359,16 @@ def query():
         if not game_count:
             flash("게임이 없습니다! 분석이 불가능합니다.")
             return redirect(url_for('analysis.main'))
-        games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
-        games = [i for i in games if i[0]]
-        if game_count > 100:
-            games = list(set(sorted(games, key=lambda x: -x[1])[:20]).union(set(sorted(games, key=lambda x: -x[2]))))
+        
         user_dict = {
             "id":user.id,
-            "name":user.username,
-            "url":user.profileurl,
-            "avt":user.avatarfull
-        }
-        # store_user_data(user, data)
-        games_dict = dict((i[0], (i[1], i[2])) for i in games)
-        return redirect(url_for('analysis.result', recommend_result=get_recommend_result(game_count, games), user=user_dict, games=games_dict, game_count=game_count))
+            "username":user.username,
+            "profileurl":user.profileurl,
+            "avatar":user.avatar,
+            "avatarmedium":user.avatarmedium,
+            "avatarfull":user.avatarfull,
+            "visibility":user.visibility}
+        return redirect(url_for('analysis.result', user_dict=user_dict))
     return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
 
 
@@ -389,45 +388,32 @@ def user():
         if not game_count:
             flash("게임이 없습니다! 분석이 불가능합니다.")
             return redirect(url_for('analysis.main'))
-        games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
-        games = [i for i in games if i[1]]
-        if game_count > 40:
-            games = list(set(sorted(games, key=lambda x: -x[1])[:20]).union(set(sorted(games, key=lambda x: -x[2]))))
-
         user_dict = {
             "id":user.id,
-            "name":user.username,
-            "url":user.profileurl,
-            "avt":user.avatarfull
-        }
-        # store_user_data(user, data)
-        games_dict = dict((i[0], (i[1], i[2])) for i in games)
-        return redirect(url_for('analysis.result', recommend_result=get_recommend_result(game_count, games), user=user_dict, games=games_dict, game_count=game_count))
+            "username":user.username,
+            "profileurl":user.profileurl,
+            "avatar":user.avatar,
+            "avatarmedium":user.avatarmedium,
+            "avatarfull":user.avatarfull,
+            "visibility":user.visibility}    
+        return redirect(url_for('analysis.result', user_dict=user_dict))
     return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
 
 
 @bp.route('/result', methods=('GET', 'POST'))
 def result():
-    result = eval(request.args.get("recommend_result"))
-    user = eval(request.args.get("user"))
-    games = eval(request.args.get("games"))
-    games = [(k, games[k][0], games[k][1]) for k in games]
-    print(request.args.get("game_count"))
-    game_count = int(request.args.get("game_count"))
+    user_dict = eval(request.args.get("user_dict"))
+    user = User(*[user_dict[i] for i in user_dict])
+    print(user.avatarfull)
+    data = get_owned_games(user)
+    games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
+    game_count = data["game_count"]
+    result = get_recommend_result(game_count, games)
     total_playtime = sum(i[1] for i in games)
     last_epoch_time = max(i[2] for i in games)
     last_played_date = datetime.fromtimestamp(last_epoch_time)
     if result == None:
         return redirect(url_for('analysis.main'))
-    if request.method == 'POST':
-        result = get_recommend_result(game_count, games)
-        return render_template("analysis/analysis_result.html",
-            result=result,
-            user=user,
-            games=games,
-            total_playtime=total_playtime,
-            last_played_date=last_played_date,
-            game_count=game_count)
     
     return render_template("analysis/analysis_result.html",
         result=result,

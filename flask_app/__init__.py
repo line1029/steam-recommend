@@ -8,14 +8,15 @@ from config import development
 
 
 class User:
-    def __init__(self, id=0):
+    def __init__(self, id=0, username=None, profileurl=None, avatar=None, avatarmedium=None, avatarfull=None, visibility=None):
         self.id = id
-        self.username = None
-        self.profileurl = None
-        self.avatar = None
-        self.visibility = None
-        self.avatarfull = None
-        if id:
+        self.username = username
+        self.profileurl = profileurl
+        self.avatar = avatar
+        self.avatarmedium = avatarmedium
+        self.avatarfull = avatarfull
+        self.visibility = visibility
+        if id and self.username is None:
             response = requests.get(f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={api_key}&steamids={id}").json()
             if response is not None and "response" in response and "players" in response["response"] and response["response"]["players"]:
                 userdata = response["response"]["players"][0]
