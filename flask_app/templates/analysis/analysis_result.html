@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
-<!-- flash 오류 -->
-{% for message in get_flashed_messages() %}
-<div class="alert alert-danger" role="alert">
-    {{ message }}
-</div>
-{% endfor %}
+
 <!-- 유저 정보, 다시 추천 탭 -->
 <div class="container px-4 py-5 text-bg-dark border" id="user-info">
+    <!-- flash 오류 -->
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-danger" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
     <div class="row row-cols-lg-3">
         <div class="col-2 d-flex justify-content-center align-items-center">
             <a href="{{user.profileurl}}">

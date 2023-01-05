@@ -1,6 +1,26 @@
 from flask_app import db
 
 class UserData(db.Model):
+    user_id = db.Column(db.String(24), primary_key=True)
+    username = db.Column(db.String(200), nullable=False)
+    profileurl = db.Column(db.String(200), nullable=False)
+    avatar = db.Column(db.String(200), nullable=False)
+    avatarmedium = db.Column(db.String(200), nullable=False)
+    avatarfull = db.Column(db.String(200), nullable=False)
+    visibility = db.Column(db.Integer, nullable=False)
+    update_date = db.Column(db.DateTime, nullable=False)
+
+
+
+
+
+# class UserGameData(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+
+
+
+
+class UserVectorData(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     game_count = db.Column(db.Integer, nullable=False)
     played_game_count = db.Column(db.Integer, nullable=False)

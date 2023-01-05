@@ -5,34 +5,139 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import requests
 from config import development
-
-
-class User:
-    def __init__(self, id=0, username=None, profileurl=None, avatar=None, avatarmedium=None, avatarfull=None, visibility=None):
-        self.id = id
-        self.username = username
-        self.profileurl = profileurl
-        self.avatar = avatar
-        self.avatarmedium = avatarmedium
-        self.avatarfull = avatarfull
-        self.visibility = visibility
-        if id and self.username is None:
-            response = requests.get(f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={api_key}&steamids={id}").json()
-            if response is not None and "response" in response and "players" in response["response"] and response["response"]["players"]:
-                userdata = response["response"]["players"][0]
-                self.id = userdata["steamid"]
-                self.username = userdata["personaname"]
-                self.profileurl = userdata["profileurl"]
-                self.avatar = userdata["avatar"]
-                self.avatarmedium = userdata["avatarmedium"]
-                self.avatarfull = userdata["avatarfull"]
-                self.visibility = userdata["communityvisibilitystate"]
-            else:
-                flash("invalid query or couldn't get response")
-
+import sqlite3
+import joblib
+import pandas as pd
+from datetime import datetime
 
 load_dotenv()
 api_key = os.environ.get("steam_web_api_token")
+
+
+def get_user_data_from_db(user_id: int):
+    with sqlite3.connect('flask_app.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM user_data WHERE user_id=?", [user_id])
+        userdata = cur.fetchone()
+    return userdata
+
+
+def check_update_time_limit(timestamp: str):
+    update_date= datetime.strptime(timestamp, r'%Y-%m-%d %H:%M:%S.%f')
+    date_now = datetime.now()
+    diff = (date_now - update_date).total_seconds()
+    if diff > 300:
+        return True
+    return False
+
+
+def insert_user_data(userdata):
+    with sqlite3.connect('flask_app.db') as conn:
+        cur = conn.cursor()
+        cur.execute(f"""
+        INSERT INTO user_data
+        VALUES ({", ".join(["?"]*8)})
+        """,
+        userdata
+        )
+        conn.commit()
+
+
+def update_user_data(userdata):
+    with sqlite3.connect('flask_app.db') as conn:
+        cur = conn.cursor()
+        cur.execute("""
+        UPDATE user_data
+        SET
+            username=?,
+            profileurl=?,
+            avatar=?,
+            avatarmedium=?,
+            avatarfull=?,
+            visibility=?,
+            update_date=?
+        WHERE user_id=?
+        """,
+        (*userdata[1:], userdata[0])
+        )
+        conn.commit()
+
+
+def get_user_data_from_web(user_id):
+    response = requests.get(f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={api_key}&steamids={user_id}").json()
+    if response is not None and "response" in response and "players" in response["response"] and response["response"]["players"]:
+        userdata = response["response"]["players"][0]
+        return (userdata["steamid"],
+                userdata["personaname"],
+                userdata["profileurl"],
+                userdata["avatar"],
+                userdata["avatarmedium"],
+                userdata["avatarfull"],
+                userdata["communityvisibilitystate"],
+                datetime.now())
+
+
+class User:
+    def __init__(self, id=0):
+        self.id = id
+        self.username = None
+        self.profileurl = None
+        self.avatar = None
+        self.avatarmedium = None
+        self.avatarfull = None
+        self.visibility = None
+        self.updatedate = None
+        
+        if id==0:
+            return
+        userdata = get_user_data_from_db(id)
+        if not userdata:
+            userdata = get_user_data_from_web(id)
+            if not userdata:
+                flash("invalid query or couldn't get response")        
+            else:
+                insert_user_data(userdata)
+        elif check_update_time_limit(userdata[-1]):
+            userdata = get_user_data_from_web(id)
+            if not userdata:
+                flash("couldn't get response")        
+            else:
+                update_user_data(userdata)
+        if userdata:
+            self.id, self.username, self.profileurl, self.avatar, self.avatarmedium, self.avatarfull, self.visibility, self.updatedate = userdata
+                
+
+
+
+
+
+
+
+def select_all_candidate_vector():
+    with sqlite3.connect('flask_app.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM game_genre_vector g")
+        data = cur.fetchall()
+    return pd.DataFrame(data).set_index(0)
+
+
+def select_all_candidate_games():
+    with sqlite3.connect('flask_app.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM game g")
+        data = cur.fetchall()
+        cur.execute("PRAGMA table_info(game);")
+        cols = [i[1] for i in cur.fetchall()]
+    return pd.DataFrame(data, columns=cols).set_index(cols[0])
+
+
+candidate_games = select_all_candidate_games()
+candidate_vector = select_all_candidate_vector()
+id_to_tag = joblib.load("id_to_tag.pkl")
+tag_to_id = joblib.load("tag_to_id.pkl")
+
+
+
 db = SQLAlchemy()
 migrate = Migrate()
 

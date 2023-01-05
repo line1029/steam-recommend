@@ -9,35 +9,12 @@ import json
 from sklearn.metrics.pairwise import cosine_similarity
 from flask import Blueprint, url_for, render_template, request, flash, g, jsonify
 from werkzeug.utils import redirect
-from flask_app import api_key, User
+from flask_app import api_key, User, candidate_games, candidate_vector, tag_to_id, get_user_data_from_web
 from flask_app.forms import QueryForm, UserForm
 from datetime import datetime
 
 
 
-
-def select_all_candidate_vector():
-    with sqlite3.connect('flask_app.db') as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM game_genre_vector g")
-        data = cur.fetchall()
-    return pd.DataFrame(data).set_index(0)
-
-
-def select_all_candidate_games():
-    with sqlite3.connect('flask_app.db') as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM game g")
-        data = cur.fetchall()
-        cur.execute("PRAGMA table_info(game);")
-        cols = [i[1] for i in cur.fetchall()]
-    return pd.DataFrame(data, columns=cols).set_index(cols[0])
-
-
-candidate_games = select_all_candidate_games()
-candidate_vector = select_all_candidate_vector()
-id_to_tag = joblib.load("id_to_tag.pkl")
-tag_to_id = joblib.load("tag_to_id.pkl")
 
 bp = Blueprint('analysis', __name__, url_prefix='/analysis')
 
@@ -72,25 +49,28 @@ def transform_custumurl_to_steam_id_64(custumurl):
 def get_steam_id_64_from_url(url):
     path = urlparse(url).path
     if path.startswith("/profile"):
-        return path[10:]
+        return path[10:].replace("/", "")
     else:
-        custumurl = path[4:]
+        custumurl = path[4:].replace("/", "")
         return transform_custumurl_to_steam_id_64(custumurl)
 
 
-def get_user_data(query: str) -> User:
+def get_user_id_from_query(query: str) -> str:
     if is_valid_url(query):
-        id = get_steam_id_64_from_url(query)
+        user_id = get_steam_id_64_from_url(query)
     else:
         if is_valid_query(query) is False:
             flash("invalid query")
-            return User()
+            return 0
         if query.isdigit() is False:
-            id = transform_custumurl_to_steam_id_64(query)
+            user_id = transform_custumurl_to_steam_id_64(query)
         else:
-            id = f"{query},{transform_custumurl_to_steam_id_64(query)}"
-    user = User(id)
-    return user
+            userdata = get_user_data_from_web(query)
+            if userdata:
+                user_id = userdata[0]
+            else:
+                user_id = transform_custumurl_to_steam_id_64(query)
+    return user_id
 
 
 def get_owned_games(user: User):
@@ -225,7 +205,7 @@ def check_update_time_limit(user: User):
     date_now = datetime.now()
     with sqlite3.connect("flask_app.db") as conn:
         cur = conn.cursor()
-        cur.execute("SELECT update_date from user_data where user_id=?;", [user.id])
+        cur.execute("SELECT update_date from user_vector_data where user_id=?;", [user.id])
         update_date = cur.fetchone()[0]
     if not update_date:
         return 2
@@ -238,7 +218,7 @@ def check_update_time_limit(user: User):
     
 
 
-def store_user_data(user: User, data: dict):
+def store_user_vector_data(user: User, data: dict):
     checked = check_update_time_limit(user)
     if not checked:
         flash("새로고침은 1시간에 한번씩만 가능합니다.")
@@ -304,7 +284,7 @@ def store_user_data(user: User, data: dict):
             cols = [*cols[1:], cols[0]]
             cur.execute(
                 """
-                UPDATE user_data
+                UPDATE user_vector_data
                 SET
                     game_count=?,
                     played_game_count=?,
@@ -322,7 +302,7 @@ def store_user_data(user: User, data: dict):
         elif checked == 0:
             cur.execute(
                 f"""
-                INSERT INTO user_data
+                INSERT INTO user_vector_data
                 VALUES ({",".join(["?"]*len(cols))})
                 """,
                 cols
@@ -349,7 +329,7 @@ def query():
     image_appid = np.random.choice(candidate_games.index, 1)[0]
     if request.method == 'POST' and query_form.validate_on_submit():
         query = query_form.query.data
-        user = get_user_data(query)
+        user = User(get_user_id_from_query(query))
         if user.username == None:
             return redirect(url_for('analysis.main'))
         data = get_owned_games(user)
@@ -359,16 +339,7 @@ def query():
         if not game_count:
             flash("게임이 없습니다! 분석이 불가능합니다.")
             return redirect(url_for('analysis.main'))
-        
-        user_dict = {
-            "id":user.id,
-            "username":user.username,
-            "profileurl":user.profileurl,
-            "avatar":user.avatar,
-            "avatarmedium":user.avatarmedium,
-            "avatarfull":user.avatarfull,
-            "visibility":user.visibility}
-        return redirect(url_for('analysis.result', user_dict=user_dict))
+        return redirect(url_for('analysis.result', user_id=user.id))
     return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
 
 
@@ -387,33 +358,29 @@ def user():
         game_count = data["game_count"]
         if not game_count:
             flash("게임이 없습니다! 분석이 불가능합니다.")
-            return redirect(url_for('analysis.main'))
-        user_dict = {
-            "id":user.id,
-            "username":user.username,
-            "profileurl":user.profileurl,
-            "avatar":user.avatar,
-            "avatarmedium":user.avatarmedium,
-            "avatarfull":user.avatarfull,
-            "visibility":user.visibility}    
-        return redirect(url_for('analysis.result', user_dict=user_dict))
+            return redirect(url_for('analysis.main'))   
+        return redirect(url_for('analysis.result', user_id=user.id))
     return render_template('analysis/analysis_form.html', query_form=query_form, user_form=user_form, image_appid=image_appid)
 
 
 @bp.route('/result', methods=('GET', 'POST'))
 def result():
-    user_dict = eval(request.args.get("user_dict"))
-    user = User(*[user_dict[i] for i in user_dict])
-    print(user.avatarfull)
+    user_id = request.args.get("user_id")
+    user = User(user_id)
+    if user.username == None:
+        return redirect(url_for('analysis.main'))
     data = get_owned_games(user)
-    games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
+    if data == None:
+        return redirect(url_for('analysis.main'))
     game_count = data["game_count"]
+    if not game_count:
+        flash("게임이 없습니다! 분석이 불가능합니다.")
+        return redirect(url_for('analysis.main'))   
+    games = [(game["appid"], game["playtime_forever"], game["rtime_last_played"]) for game in data["games"]]
     result = get_recommend_result(game_count, games)
     total_playtime = sum(i[1] for i in games)
     last_epoch_time = max(i[2] for i in games)
     last_played_date = datetime.fromtimestamp(last_epoch_time)
-    if result == None:
-        return redirect(url_for('analysis.main'))
     
     return render_template("analysis/analysis_result.html",
         result=result,

@@ -10,3 +10,6 @@ chromedriver.exe
 *.csv
 
 logs
+
+Untitled.ipynb
+migrations/versions/
