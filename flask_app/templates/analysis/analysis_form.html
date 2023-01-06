@@ -3,11 +3,6 @@
 <!-- url 입력 -->
 <div class="container" data-aos="fade-up">
     <div class="row">
-        <div class="col-lg d-flex align-items-end">
-            <a href="https://store.steampowered.com/app/{{image_appid}}">
-            <img class="img-fluid rounded-5" src="https://cdn.akamai.steamstatic.com/steam/apps/{{image_appid}}/capsule_616x353.jpg">
-            </a>
-        </div>
         <div class="col-lg">
             <h5 class="my-3 pb-2 text-white">프로필 검색</h5>
             <form action="{{ url_for('analysis.query') }}" method="post" onkeydown="if (event.keyCode == 13) { this.submit(); }" class="border-bottom">
@@ -51,14 +46,21 @@
                     <div class="col d-flex justify-content-center align-items-center py-2">
                         <h4>유저 이름</h4>
                     </div>
-                    <div class="col d-flex justify-content-center py-2">
-                        <button class="btn btn-outline-danger btn-lg px-4 me-sm-3 fw-bold float-end" data-aos="fade-up" data-aos-delay="200" disabled>
-                            추천받기
-                        </button>
+                    <div class="col d-flex justify-content-center py-2 text-bg-dark">
+                        <a class="text-muted" data-aos="fade-up" data-aos-delay="200" href="{{ url_for('auth.login') }}">
+                        <img src='{{ url_for("static", filename="images/steam_login.png") }}'>
+                        <br>
+                        스팀을 통해 로그인하기
+                        </a>
                     {% endif %}
                     </div>
                 </div>
             </form>
+        </div>
+        <div class="col-lg d-flex align-items-end">
+            <a href="https://store.steampowered.com/app/{{image_appid}}">
+            <img class="img-fluid rounded-5" src="https://cdn.akamai.steamstatic.com/steam/apps/{{image_appid}}/capsule_616x353.jpg">
+            </a>
         </div>
     </div>
 </div>

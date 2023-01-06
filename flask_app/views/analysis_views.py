@@ -4,10 +4,8 @@ import re
 import requests
 from urllib.parse import urlparse
 import sqlite3
-import joblib
-import json
 from sklearn.metrics.pairwise import cosine_similarity
-from flask import Blueprint, url_for, render_template, request, flash, g, jsonify
+from flask import Blueprint, url_for, render_template, request, flash, g
 from werkzeug.utils import redirect
 from flask_app import api_key, User, candidate_games, candidate_vector, tag_to_id, get_user_data_from_web
 from flask_app.forms import QueryForm, UserForm
@@ -73,25 +71,7 @@ def get_user_id_from_query(query: str) -> str:
     return user_id
 
 
-def get_owned_games(user: User):
-    if user.visibility != 3:
-        flash("없는 프로필이거나 프로필이 비공개 상태입니다. 다시 한번 확인해주세요.")
-        return
-    url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
-    params = {
-        "key":api_key,
-        "steamid":user.id,
-        "include_played_free_games":True
-    }
-    response = requests.get(url, params=params)
-    if response.status_code != 200:
-        flash("요청 실패. 서버 에러거나 호스트의 API 키가 차단되었습니다. 잠시 후 다시 시도해주세요.")
-        return
-    data = response.json()["response"]
-    if not data:
-        flash("아무 게임도 없거나 세부 정보가 공개되어있지 않습니다. 세부 정보를 공개상태로 바꿔주세요.")
-        return
-    return data
+
 
 
 def get_feature_vector_from_web(appid: int) -> 'np.ndarray[np.bool]':
@@ -332,7 +312,7 @@ def query():
         user = User(get_user_id_from_query(query))
         if user.username == None:
             return redirect(url_for('analysis.main'))
-        data = get_owned_games(user)
+        data = user.get_owned_games()
         if data == None:
             return redirect(url_for('analysis.main'))
         game_count = data["game_count"]
@@ -349,10 +329,10 @@ def user():
     user_form = UserForm()
     image_appid = np.random.choice(candidate_games.index, 1)[0]
     if request.method == 'POST' and user_form.validate_on_submit():
-        user = g.user
+        user: User = g.user
         if user.username == None:
             return redirect(url_for('analysis.main'))
-        data = get_owned_games(user)
+        data = user.get_owned_games()
         if data == None:
             return redirect(url_for('analysis.main'))
         game_count = data["game_count"]
@@ -366,10 +346,12 @@ def user():
 @bp.route('/result', methods=('GET', 'POST'))
 def result():
     user_id = request.args.get("user_id")
+    # if not user_id:
+    #     return redirect(url_for('analysis.main'))
     user = User(user_id)
     if user.username == None:
         return redirect(url_for('analysis.main'))
-    data = get_owned_games(user)
+    data = user.get_owned_games()
     if data == None:
         return redirect(url_for('analysis.main'))
     game_count = data["game_count"]

@@ -14,6 +14,17 @@ load_dotenv()
 api_key = os.environ.get("steam_web_api_token")
 
 
+def delete_user_data():
+    with sqlite3.connect('flask_app.db') as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM user_data")
+        conn.commit()
+
+
+# delete all user data at app start
+delete_user_data()
+
+
 def get_user_data_from_db(user_id: int):
     with sqlite3.connect('flask_app.db') as conn:
         cur = conn.cursor()
@@ -105,6 +116,27 @@ class User:
                 update_user_data(userdata)
         if userdata:
             self.id, self.username, self.profileurl, self.avatar, self.avatarmedium, self.avatarfull, self.visibility, self.updatedate = userdata
+
+    
+    def get_owned_games(self):
+        if self.visibility != 3:
+            flash("없는 프로필이거나 프로필이 비공개 상태입니다. 다시 한번 확인해주세요.")
+            return
+        url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
+        params = {
+            "key":api_key,
+            "steamid":self.id,
+            "include_played_free_games":True
+        }
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            flash("요청 실패. 서버 에러거나 호스트의 API 키가 차단되었습니다. 잠시 후 다시 시도해주세요.")
+            return
+        data = response.json()["response"]
+        if not data:
+            flash("아무 게임도 없거나 세부 정보가 공개되어있지 않습니다. 세부 정보를 공개상태로 바꿔주세요.")
+            return
+        return data
                 
 
 
